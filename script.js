@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let searchInput;
     let isLoading = false;
     let currentBounds = null;
+    let allFlights = []; // Store all flights for filtering
 
     // Initialize sidebar toggle
     const toggleBtn = document.getElementById('toggle-sidebar');
@@ -17,76 +18,199 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleBtn.querySelector('i').classList.toggle('fa-chevron-left');
     });
 
+    // Initialize altitude filter event listeners
+    function initAltitudeFilters() {
+        const filterInputs = document.querySelectorAll('.altitude-filters input[type="checkbox"]');
+        filterInputs.forEach(input => {
+            input.addEventListener('change', updateFlightFilters);
+        });
+    }
+
+    // Get selected altitude ranges
+    function getSelectedAltitudeRanges() {
+        const checkboxes = document.querySelectorAll('.altitude-filters input[type="checkbox"]:checked');
+        return Array.from(checkboxes).map(checkbox => checkbox.value);
+    }
+
+    // Check if flight altitude is within selected ranges
+    function isFlightInSelectedRanges(flight, selectedRanges) {
+        const altitude = flight.altitude;
+        return selectedRanges.some(range => {
+            if (range === '40000+') {
+                return altitude >= 40000;
+            }
+            const [min, max] = range.split('-').map(Number);
+            return altitude >= min && altitude < max;
+        });
+    }
+
+    // Update displayed flights based on filters
+    function updateFlightFilters() {
+        const selectedRanges = getSelectedAltitudeRanges();
+        
+        // Clear existing markers
+        markers.forEach(marker => marker.remove());
+        markers = [];
+
+        // Filter and display flights
+        const visibleFlights = allFlights.filter(flight => 
+            isFlightInSelectedRanges(flight, selectedRanges)
+        );
+
+        // Update markers
+        visibleFlights.forEach(flight => {
+            const marker = L.marker(flight.position, {
+                icon: createPlaneIcon(flight.heading, flight.altitude)
+            }).addTo(map);
+
+            const infoWindow = createInfoWindow(flight);
+            marker.bindPopup(infoWindow);
+            markers.push(marker);
+        });
+
+        // Update flight list
+        updateFlightList(visibleFlights);
+    }
+
     // Function to fetch flight data
     async function fetchFlightData() {
-        if (isLoading) return [];
+        if (isLoading) return;
         
         try {
             isLoading = true;
             const flightList = document.getElementById('flightList');
             if (flightList) {
                 flightList.classList.add('loading');
+                flightList.innerHTML = '<div class="loading-message">Fetching flights...</div>';
             }
 
-            // Use a CORS proxy to fetch flight data
-            const corsProxy = 'https://cors-anywhere.herokuapp.com/';
-            const openskyApi = 'https://opensky-network.org/api/states/all';
+            const apiKey = '0e51e0b298334ae2cef9e792a689251a';
             
-            const response = await fetch(corsProxy + openskyApi, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'Origin': window.location.origin
+            // Use a simpler API endpoint first
+            const flightsUrl = `https://api.aviationstack.com/v1/flights?access_key=${apiKey}&limit=100`;
+            
+            try {
+                console.log('Fetching from:', flightsUrl); // Debug log
+                const response = await fetch(flightsUrl);
+                const data = await response.json();
+                
+                console.log('API Response:', data); // Debug log
+                
+                if (data.error) {
+                    console.error('API Error:', data.error);
+                    throw new Error(data.error.message || 'API Error');
                 }
-            });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+                if (!data || !data.data || !Array.isArray(data.data)) {
+                    console.error('Invalid data format:', data);
+                    throw new Error('Invalid data format received from API');
+                }
 
-            const data = await response.json();
-            
-            if (data && data.states && Array.isArray(data.states)) {
-                console.log(`Received ${data.states.length} flights`);
-                return data.states
-                    .filter(flight => flight[5] && flight[6] && flight[1]) // Has position and callsign
+                const flights = data.data
+                    .filter(flight => {
+                        // More detailed logging
+                        console.log('Processing flight:', flight);
+                        
+                        return flight.flight_status === 'active' &&
+                               flight.departure &&
+                               flight.arrival &&
+                               flight.live?.latitude != null &&
+                               flight.live?.longitude != null;
+                    })
                     .map(flight => ({
-                        icao24: flight[0],
-                        callsign: flight[1].trim(),
-                        country: flight[2] || 'Unknown',
+                        icao24: flight.flight.iata || flight.flight.icao,
+                        callsign: flight.flight.iata || flight.flight.icao,
+                        country: flight.airline?.country_name || 'Unknown',
+                        airline: flight.airline?.name || 'Unknown Airline',
                         position: {
-                            lat: flight[6],
-                            lng: flight[5]
+                            lat: parseFloat(flight.live.latitude),
+                            lng: parseFloat(flight.live.longitude)
                         },
-                        altitude: Math.round((flight[7] || 0) * 3.28084), // Convert meters to feet
-                        speed: Math.round((flight[9] || 0) * 1.944), // Convert m/s to knots
-                        heading: flight[10] || 0,
-                        lastUpdate: flight[4],
-                        onGround: flight[8],
-                        // Add departure and arrival if available
-                        departure: flight[11] || 'N/A',
-                        arrival: flight[12] || 'N/A',
-                        airline: getAirlineFromCallsign(flight[1]) // Get airline from full callsign
-                    }))
-                    .filter(flight => !flight.onGround); // Only show airborne aircraft
-            }
+                        altitude: Math.round(parseFloat(flight.live?.altitude || 35000) * 3.28084), // Convert to feet
+                        speed: Math.round(parseFloat(flight.live?.speed || 400)), // Use actual speed if available
+                        heading: parseFloat(flight.live?.direction || 0),
+                        lastUpdate: Date.now() / 1000,
+                        departure: flight.departure ? `${flight.departure.airport || ''} (${flight.departure.iata || 'N/A'})` : 'N/A',
+                        arrival: flight.arrival ? `${flight.arrival.airport || ''} (${flight.arrival.iata || 'N/A'})` : 'N/A',
+                        status: flight.flight_status,
+                        isIndian: (flight.airline?.country_name === 'India') || 
+                                (flight.departure?.country_name === 'India') ||
+                                (flight.arrival?.country_name === 'India')
+                    }));
 
-            // If no data from API, fall back to mock data for testing
-            console.log('No flight data received, using mock data');
-            return generateMockFlights();
+                console.log(`Processed ${flights.length} valid flights`); // Debug log
+                
+                if (flights.length === 0) {
+                    console.log('No flights found, falling back to mock data');
+                    return generateMockFlights();
+                }
+
+                return flights;
+
+            } catch (error) {
+                console.error('API Error:', error);
+                console.log('Falling back to mock data due to API error');
+                return generateMockFlights();
+            }
 
         } catch (error) {
-            console.error('Error fetching flight data:', error);
-            console.log('Falling back to mock data');
+            console.error('Error in fetchFlightData:', error);
+            if (flightList) {
+                flightList.innerHTML = `
+                    <div class="error-message">
+                        <p>Error fetching flight data: ${error.message}</p>
+                        <p>Using simulated flight data instead.</p>
+                    </div>`;
+            }
             return generateMockFlights();
         } finally {
             isLoading = false;
-            const flightList = document.getElementById('flightList');
             if (flightList) {
                 flightList.classList.remove('loading');
             }
         }
     }
+
+    // Helper function to calculate heading between two points
+    function calculateHeading(lat1, lon1, lat2, lon2) {
+        const φ1 = lat1 * Math.PI / 180;
+        const φ2 = lat2 * Math.PI / 180;
+        const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+        const y = Math.sin(Δλ) * Math.cos(φ2);
+        const x = Math.cos(φ1) * Math.sin(φ2) -
+                 Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+
+        const θ = Math.atan2(y, x);
+        const heading = (θ * 180 / Math.PI + 360) % 360;
+        
+        return heading;
+    }
+
+    // Add error message styling
+    const style = document.createElement('style');
+    style.textContent = `
+        .error-message {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px;
+            color: var(--text-primary);
+        }
+        
+        .error-message ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .loading-message {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-primary);
+        }
+    `;
+    document.head.appendChild(style);
 
     // Helper function to get airline from callsign
     function getAirlineFromCallsign(callsign) {
@@ -132,23 +256,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // Generate mock flight data for demonstration
     function generateMockFlights() {
         const airports = {
+            // Major Indian airports
             'DEL': { lat: 28.5665, lng: 77.1031, name: 'Indira Gandhi International Airport, Delhi' },
             'BOM': { lat: 19.0896, lng: 72.8656, name: 'Chhatrapati Shivaji International Airport, Mumbai' },
             'MAA': { lat: 12.9941, lng: 80.1709, name: 'Chennai International Airport' },
             'BLR': { lat: 13.1986, lng: 77.7066, name: 'Kempegowda International Airport, Bangalore' },
             'CCU': { lat: 22.6520, lng: 88.4463, name: 'Netaji Subhas Chandra Bose International Airport, Kolkata' },
             'HYD': { lat: 17.2403, lng: 78.4294, name: 'Rajiv Gandhi International Airport, Hyderabad' },
-            'AMD': { lat: 23.0225, lng: 72.5714, name: 'Sardar Vallabhbhai Patel International Airport, Ahmedabad' },
-            'COK': { lat: 10.1520, lng: 76.4012, name: 'Cochin International Airport' },
-            'GOI': { lat: 15.3808, lng: 73.8314, name: 'Dabolim Airport, Goa' },
-            'PNQ': { lat: 18.5793, lng: 73.9089, name: 'Pune Airport' }
+            // International hubs
+            'DXB': { lat: 25.2532, lng: 55.3657, name: 'Dubai International Airport' },
+            'SIN': { lat: 1.3644, lng: 103.9915, name: 'Singapore Changi Airport' },
+            'LHR': { lat: 51.4700, lng: -0.4543, name: 'London Heathrow Airport' },
+            'JFK': { lat: 40.6413, lng: -73.7781, name: 'John F Kennedy International Airport' }
         };
 
         const airlines = {
             'AI': { name: 'Air India', routes: ['DEL-BOM', 'BOM-MAA', 'DEL-CCU', 'BLR-DEL', 'HYD-DEL'] },
-            'UK': { name: 'Vistara', routes: ['DEL-BOM', 'BLR-DEL', 'HYD-BOM', 'CCU-DEL', 'GOI-DEL'] },
-            '6E': { name: 'IndiGo', routes: ['DEL-BOM', 'BLR-CCU', 'HYD-MAA', 'PNQ-DEL', 'COK-BOM'] },
-            'SG': { name: 'SpiceJet', routes: ['DEL-AMD', 'BOM-COK', 'MAA-CCU', 'BLR-GOI', 'HYD-PNQ'] }
+            'UK': { name: 'Vistara', routes: ['DEL-BOM', 'BLR-DEL', 'HYD-BOM', 'CCU-DEL', 'MAA-BLR'] },
+            '6E': { name: 'IndiGo', routes: ['DEL-BOM', 'BLR-CCU', 'HYD-MAA', 'BOM-BLR', 'DEL-HYD'] },
+            'SG': { name: 'SpiceJet', routes: ['DEL-BLR', 'BOM-CCU', 'MAA-HYD', 'BLR-BOM', 'HYD-DEL'] },
+            // International airlines
+            'EK': { name: 'Emirates', routes: ['DXB-DEL', 'DXB-BOM', 'DXB-BLR'] },
+            'SQ': { name: 'Singapore Airlines', routes: ['SIN-DEL', 'SIN-BOM', 'SIN-BLR'] },
+            'BA': { name: 'British Airways', routes: ['LHR-DEL', 'LHR-BOM', 'LHR-BLR'] },
+            'AA': { name: 'American Airlines', routes: ['JFK-DEL', 'JFK-BOM'] }
         };
 
         const mockFlights = [];
@@ -174,17 +305,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 mockFlights.push({
                     icao24: `${airlineCode}${flightNumber}`,
                     callsign: `${airlineCode}${flightNumber}`,
-                    country: 'India',
+                    country: airlineCode.match(/^(AI|UK|6E|SG)$/) ? 'India' : 'International',
                     airline: airline.name,
                     position: { lat, lng },
-                    altitude: 25000 + Math.random() * 15000, // Between 25,000 and 40,000 feet
-                    speed: 400 + Math.random() * 100, // Between 400 and 500 knots
+                    altitude: 25000 + Math.random() * 15000,
+                    speed: 400 + Math.random() * 100,
                     heading: heading,
                     lastUpdate: Date.now() / 1000,
                     onGround: false,
                     departure: `${fromAirport} (${airports[fromAirport].name})`,
                     arrival: `${toAirport} (${airports[toAirport].name})`,
-                    status: 'active'
+                    status: 'active',
+                    isIndian: airlineCode.match(/^(AI|UK|6E|SG)$/) ? true : false
                 });
             });
         });
@@ -196,17 +328,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function initMap() {
         console.log('Initializing map...');
         
-        // Create the map centered on India
         map = L.map('map', {
-            center: [20.5937, 78.9629],
-            zoom: 5,
-            minZoom: 3,
-            zoomControl: true,
+            center: [20.5937, 78.9629],  // Center on India
+            zoom: 5,                     // Closer zoom on India
+            minZoom: 2,                  // Allow zooming out to see the whole world
+            maxZoom: 10,                 // Limit maximum zoom for performance
+            zoomControl: false,
             attributionControl: true
         });
 
-        // Add dark theme map tiles
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        // Add light theme map tiles
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '©OpenStreetMap, ©CartoDB',
             subdomains: 'abcd',
             maxZoom: 19
@@ -218,11 +350,15 @@ document.addEventListener('DOMContentLoaded', () => {
             searchInput.addEventListener('input', handleSearch);
         }
 
+        // Initialize altitude filters
+        initAltitudeFilters();
+
         // Initial flight update
         updateFlights();
         
-        // Regular updates every 30 seconds
-        setInterval(updateFlights, 30000);
+        // Update every 5 minutes to preserve API calls
+        // Regular updates every 2 minutes to get fresh data
+        setInterval(updateFlights, 120000);
     }
 
     // Create plane icon
@@ -382,32 +518,35 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Log status
         console.log(`Updated ${flights.length} flights`);
+
+        // Store flights for filtering
+        allFlights = flights;
     }
 
+    // Update flight list without India-specific prioritization
     function updateFlightList(flights) {
         const flightList = document.getElementById('flightList');
         if (!flightList) return;
 
         const searchQuery = searchInput ? searchInput.value.toLowerCase() : '';
         
-        // Sort flights to prioritize Indian flights
-        const sortedFlights = flights.sort((a, b) => {
-            if (a.country === 'India' && b.country !== 'India') return -1;
-            if (a.country !== 'India' && b.country === 'India') return 1;
-            return 0;
-        });
-
-        const filteredFlights = sortedFlights
+        // Sort flights to show Indian flights first
+        const sortedFlights = flights
+            .sort((a, b) => {
+                if (a.isIndian && !b.isIndian) return -1;
+                if (!a.isIndian && b.isIndian) return 1;
+                return 0;
+            })
             .filter(flight => 
                 flight.callsign.toLowerCase().includes(searchQuery) ||
                 flight.country.toLowerCase().includes(searchQuery) ||
                 (flight.departure && flight.departure.toLowerCase().includes(searchQuery)) ||
                 (flight.arrival && flight.arrival.toLowerCase().includes(searchQuery))
             )
-            .slice(0, 100); // Limit to 100 flights in the list for performance
+            .slice(0, 100); // Limit to 100 flights for performance
 
-        const flightCards = filteredFlights.map(flight => `
-            <div class="flight-card ${flight.country === 'India' ? 'indian-flight' : ''}" 
+        const flightCards = sortedFlights.map(flight => `
+            <div class="flight-card ${flight.isIndian ? 'indian-flight' : ''}" 
                  onclick="centerOnFlight(${flight.position.lat}, ${flight.position.lng})">
                 <div class="flight-header">
                     <strong>${flight.callsign}</strong>
@@ -450,18 +589,55 @@ document.addEventListener('DOMContentLoaded', () => {
         html.setAttribute('data-theme', newTheme);
         
         if (map) {
-            // Remove existing tiles and add new tiles based on the new theme
+            // Remove existing tiles
             map.eachLayer(layer => {
                 if (layer instanceof L.TileLayer) {
                     map.removeLayer(layer);
                 }
             });
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/' + (newTheme === 'dark' ? 'dark_all/' : 'light_all/') + '{z}/{x}/{y}{r}.png', {
+            
+            // Add new tiles based on theme
+            const tileUrl = newTheme === 'dark' 
+                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+            
+            L.tileLayer(tileUrl, {
                 attribution: '©OpenStreetMap, ©CartoDB',
                 subdomains: 'abcd',
                 maxZoom: 19
             }).addTo(map);
         }
+    };
+
+    // Center map on India function
+    window.centerOnIndia = function() {
+        map.setView([20.5937, 78.9629], 4);
+    };
+
+    // Add India center button to the map
+    function addIndiaCenterButton() {
+        const indiaCenterBtn = L.control({ position: 'bottomright' });
+        
+        indiaCenterBtn.onAdd = function() {
+            const div = L.DomUtil.create('div', 'location-btn india-center-btn');
+            div.innerHTML = '<i class="fas fa-map-marker-alt"></i>';
+            div.title = 'Center on India';
+            
+            div.onclick = function() {
+                centerOnIndia();
+            };
+            
+            return div;
+        };
+        
+        indiaCenterBtn.addTo(map);
+    }
+
+    // Modify initMap to add the India center button
+    const originalInitMap = window.initMap;
+    window.initMap = function() {
+        originalInitMap();
+        addIndiaCenterButton();
     };
 
     // Initialize the map

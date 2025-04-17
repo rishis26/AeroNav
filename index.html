@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,10 +18,10 @@
 </head>
 <body>
     <!-- Sidebar -->
-    <div class="sidebar expanded">
+    <div class="sidebar">
         <div class="header">
             <div class="logo">
-                <i class="fas fa-plane-up"></i>
+                <i class="fas fa-plane"></i>
                 <span>AeroNav</span>
             </div>
             <div class="controls">
@@ -35,33 +35,44 @@
             </div>
         </div>
 
+        <div class="search-box">
+            <input type="text" id="search" class="search-input" placeholder="Search flights...">
+        </div>
+
         <div class="altitude-legend">
-            <h3>Altitude Scale</h3>
-            <div class="scale-items">
-                <div class="scale-item">
-                    <div class="color-box" style="background: #0066ff"></div>
-                    <span>35,000+ ft</span>
-                </div>
-                <div class="scale-item">
-                    <div class="color-box" style="background: #00cc00"></div>
-                    <span>30,000-35,000 ft</span>
-                </div>
-                <div class="scale-item">
-                    <div class="color-box" style="background: #ffff00"></div>
-                    <span>20,000-30,000 ft</span>
-                </div>
-                <div class="scale-item">
-                    <div class="color-box" style="background: #ff7f00"></div>
-                    <span>10,000-20,000 ft</span>
-                </div>
-                <div class="scale-item">
-                    <div class="color-box" style="background: #ff0000"></div>
-                    <span>< 10,000 ft</span>
-                </div>
+            <h3>Altitude Filter</h3>
+            <div class="altitude-filters">
+                <label class="filter-item">
+                    <input type="checkbox" value="35000+" checked>
+                    35,000+ ft
+                    <span class="color-indicator" style="background: #0000ff;"></span>
+                </label>
+                <label class="filter-item">
+                    <input type="checkbox" value="30000-35000" checked>
+                    30,000-35,000 ft
+                    <span class="color-indicator" style="background: #00ff00;"></span>
+                </label>
+                <label class="filter-item">
+                    <input type="checkbox" value="20000-30000" checked>
+                    20,000-30,000 ft
+                    <span class="color-indicator" style="background: #ffff00;"></span>
+                </label>
+                <label class="filter-item">
+                    <input type="checkbox" value="10000-20000" checked>
+                    10,000-20,000 ft
+                    <span class="color-indicator" style="background: #ff7f00;"></span>
+                </label>
+                <label class="filter-item">
+                    <input type="checkbox" value="<10000" checked>
+                    < 10,000 ft
+                    <span class="color-indicator" style="background: #ff0000;"></span>
+                </label>
             </div>
         </div>
 
-        <div class="flight-list" id="flightList"></div>
+        <div id="flightList" class="flight-list">
+            <!-- Flight cards will be inserted here -->
+        </div>
     </div>
 
     <!-- Toggle sidebar button -->

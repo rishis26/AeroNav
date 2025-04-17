@@ -538,7 +538,7 @@ header {
 }
 
 .flight-header strong {
-    color: var(--flight-number);
+    color: var(--accent-color);
     font-size: 1.2em;
     font-weight: 600;
 }
@@ -549,6 +549,7 @@ header {
     padding: 4px 8px;
     background: var(--bg-tertiary);
     border-radius: 4px;
+    text-transform: uppercase;
 }
 
 .flight-route {
@@ -592,60 +593,55 @@ header {
     text-align: center;
 }
 
+.altitude-filters {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.filter-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    color: var(--text-primary);
+    font-size: 0.9em;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
+}
+
+.filter-item:hover {
+    background: var(--hover-bg);
+}
+
+.filter-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--accent-color);
+}
+
+.color-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-left: auto;
+}
+
 .altitude-legend {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
     border-radius: 12px;
-    padding: 20px;
+    padding: 15px;
     margin: 15px;
 }
 
 .altitude-legend h3 {
     color: var(--text-primary);
-    margin-bottom: 15px;
     font-size: 1.1em;
     font-weight: 500;
-}
-
-.scale-items {
-    background: var(--bg-tertiary);
-    border-radius: 8px;
-    padding: 15px;
-}
-
-.scale-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 10px 0;
-    color: var(--text-primary);
-    font-size: 0.9em;
-}
-
-.color-box {
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
-    border: 1px solid var(--border-color);
-}
-
-.indian-flight {
-    background: linear-gradient(
-        135deg,
-        rgba(255, 153, 51, 0.1),
-        var(--card-bg),
-        rgba(19, 136, 8, 0.1)
-    ) !important;
-    border: 1px solid rgba(255, 153, 51, 0.2);
-}
-
-.indian-flight:hover {
-    background: linear-gradient(
-        135deg,
-        rgba(255, 153, 51, 0.2),
-        var(--hover-bg),
-        rgba(19, 136, 8, 0.2)
-    ) !important;
+    margin-bottom: 10px;
 }
 
 /* Loading state */
@@ -776,4 +772,32 @@ header {
 
 .flight-list::-webkit-scrollbar-thumb:hover {
     background: var(--text-secondary);
+}
+
+.india-center-btn {
+    margin-bottom: 70px !important;  /* Position above the location button */
+    background: var(--glass-background);
+    backdrop-filter: var(--glass-backdrop);
+    -webkit-backdrop-filter: var(--glass-backdrop);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+}
+
+.india-center-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+}
+
+.indian-flight {
+    border-left: 4px solid #ff9933 !important; /* Indian flag saffron color */
+    background: var(--card-bg) !important;
+}
+
+.indian-flight .flight-header strong {
+    color: #ff9933 !important;
+}
+
+.indian-flight:hover {
+    border-color: #ff9933 !important;
+    box-shadow: 0 4px 12px rgba(255, 153, 51, 0.2) !important;
 } 
