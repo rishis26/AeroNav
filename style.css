@@ -1,0 +1,779 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+:root {
+    --dark-bg: #1a1a1a;
+    --darker-bg: #141414;
+    --header-bg: #232323;
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0a0;
+    --accent-blue: #008fd5;
+    --border-color: #333;
+    --hover-bg: #2a2a2a;
+    --glass-background: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.18);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    --glass-backdrop: blur(8px);
+}
+
+:root[data-theme="dark"] {
+    --bg-primary: #1a1f2e;
+    --bg-secondary: #232838;
+    --bg-tertiary: #2c324a;
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --accent-color: #4a90e2;
+    --hover-bg: #2c324a;
+    --card-bg: #232838;
+    --card-border: rgba(255, 255, 255, 0.1);
+    --flight-number: #ff9933;
+    --icon-color: #4a90e2;
+    --primary-color: #4a90e2;
+    --bg-color: #1a1a1a;
+    --panel-bg: rgba(30, 30, 30, 0.95);
+    --text-color: #ffffff;
+    --hover-color: rgba(74, 144, 226, 0.1);
+    --glass-background: rgba(17, 25, 40, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.125);
+}
+
+:root[data-theme="light"] {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f7fa;
+    --bg-tertiary: #edf2f7;
+    --text-primary: #1a202c;
+    --text-secondary: #4a5568;
+    --border-color: #e2e8f0;
+    --accent-color: #2b6cb0;
+    --hover-bg: #f8fafc;
+    --card-bg: #ffffff;
+    --card-border: #e2e8f0;
+    --flight-number: #c05621;
+    --icon-color: #3182ce;
+    --primary-color: #2196f3;
+    --bg-color: #ffffff;
+    --panel-bg: rgba(255, 255, 255, 0.95);
+    --text-color: #333333;
+    --hover-color: rgba(33, 150, 243, 0.1);
+}
+
+body {
+    line-height: 1.6;
+    background-color: var(--dark-bg);
+    color: var(--text-primary);
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+}
+
+.container {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    background-color: var(--header-bg);
+    color: var(--text-primary);
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.search-container {
+    padding: 15px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.search-container input {
+    background: var(--bg-primary);
+    backdrop-filter: var(--glass-backdrop);
+    -webkit-backdrop-filter: var(--glass-backdrop);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 12px;
+    border-radius: 12px;
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+.search-container button {
+    background-color: var(--accent-blue);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.map-container {
+    flex: 1;
+    display: flex;
+    position: relative;
+}
+
+#map {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 0;
+    background-color: var(--bg-primary);
+}
+
+/* Leaflet specific styles */
+.leaflet-container {
+    background-color: var(--darker-bg) !important;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+    background: var(--card-bg);
+    color: var(--text-primary);
+}
+
+.leaflet-popup-content {
+    color: var(--text-primary);
+}
+
+.flight-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+.map-controls {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: var(--darker-bg);
+    height: 100%;
+    width: 350px;
+    border-left: 1px solid var(--border-color);
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.controls-header {
+    padding: 1rem;
+    background-color: var(--header-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.controls-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.controls-actions button {
+    background: var(--glass-background);
+    backdrop-filter: var(--glass-backdrop);
+    -webkit-backdrop-filter: var(--glass-backdrop);
+    border: 1px solid var(--glass-border);
+    color: inherit;
+    padding: 8px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.controls-actions button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: var(--glass-shadow);
+}
+
+.flight-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 1rem;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stat {
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--accent-blue);
+    display: block;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.flights-list {
+    padding: 1rem;
+}
+
+.flight-item {
+    background-color: var(--dark-bg);
+    padding: 0.8rem;
+    border: 1px solid var(--border-color);
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.flight-item:hover {
+    background-color: var(--hover-bg);
+}
+
+.flight-item.active {
+    border-color: var(--accent-blue);
+    background-color: rgba(0, 143, 213, 0.1);
+}
+
+.flight-info {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.flight-info p {
+    color: var(--text-secondary);
+}
+
+.flight-info strong {
+    color: var(--text-primary);
+}
+
+.map-info {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+/* Loading overlay */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: var(--text-primary);
+    z-index: 2000;
+}
+
+.loader {
+    border: 3px solid var(--border-color);
+    border-top: 3px solid var(--accent-blue);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Altitude color scale */
+.altitude-scale {
+    display: none;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--darker-bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--hover-bg);
+}
+
+@media (max-width: 768px) {
+    .map-controls {
+        width: 100%;
+        height: 300px;
+        top: auto;
+        bottom: 0;
+    }
+
+    .header-content {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .search-container {
+        width: 100%;
+    }
+
+    .search-container input {
+        flex: 1;
+    }
+}
+
+.toggle-btn {
+    position: fixed;
+    left: 320px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    cursor: pointer;
+    z-index: 1000;
+    border-radius: 0 8px 8px 0;
+    transition: left 0.3s ease;
+    color: var(--text-primary);
+}
+
+.toggle-btn:hover {
+    background: var(--hover-bg);
+}
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 320px;
+    height: 100vh;
+    background: var(--bg-primary) !important;
+    color: var(--text-primary);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-color);
+}
+
+.sidebar.collapsed {
+    transform: translateX(-320px);
+}
+
+.toggle-btn i {
+    transition: transform 0.3s ease;
+}
+
+.sidebar.collapsed + .toggle-btn i {
+    transform: rotate(180deg);
+}
+
+.header {
+    padding: 20px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.2em;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.logo i {
+    color: var(--accent-color);
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn:hover {
+    background: var(--hover-bg);
+    border-color: var(--accent-color);
+}
+
+.btn i {
+    color: var(--icon-color);
+}
+
+.search-box {
+    display: flex;
+    gap: 10px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.search-input::placeholder {
+    color: var(--text-secondary);
+}
+
+.flight-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 5px 0;
+    background: var(--bg-primary);
+}
+
+.flight-list.loading::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.flight-list.loading::after {
+    content: 'Loading flights...';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--text-color);
+    z-index: 2;
+}
+
+.error-message {
+    background: rgba(255, 59, 48, 0.1);
+    backdrop-filter: var(--glass-backdrop);
+    -webkit-backdrop-filter: var(--glass-backdrop);
+    border: 1px solid rgba(255, 59, 48, 0.2);
+    color: #ff3b30;
+    padding: 15px;
+    border-radius: 12px;
+    margin: 10px 0;
+    text-align: center;
+}
+
+.no-flights {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-secondary);
+    background: var(--card-bg);
+    border-radius: 12px;
+    margin: 15px;
+    border: 1px solid var(--card-border);
+}
+
+.flight-card {
+    background: var(--card-bg) !important;
+    border: 1px solid var(--card-border);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin: 10px 15px;
+    border-radius: 12px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.flight-card:hover {
+    background: var(--hover-bg) !important;
+    border-color: var(--accent-color);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.flight-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.flight-header strong {
+    color: var(--flight-number);
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+.flight-header span {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    padding: 4px 8px;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+}
+
+.flight-route {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    margin: 10px 0;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.flight-route span {
+    color: var(--text-primary);
+    font-size: 0.9em;
+}
+
+.flight-route i {
+    color: var(--icon-color);
+    font-size: 1.1em;
+}
+
+.flight-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.flight-details span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+.flight-details i {
+    color: var(--icon-color);
+    width: 16px;
+    text-align: center;
+}
+
+.altitude-legend {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 15px;
+}
+
+.altitude-legend h3 {
+    color: var(--text-primary);
+    margin-bottom: 15px;
+    font-size: 1.1em;
+    font-weight: 500;
+}
+
+.scale-items {
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.scale-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 10px 0;
+    color: var(--text-primary);
+    font-size: 0.9em;
+}
+
+.color-box {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.indian-flight {
+    background: linear-gradient(
+        135deg,
+        rgba(255, 153, 51, 0.1),
+        var(--card-bg),
+        rgba(19, 136, 8, 0.1)
+    ) !important;
+    border: 1px solid rgba(255, 153, 51, 0.2);
+}
+
+.indian-flight:hover {
+    background: linear-gradient(
+        135deg,
+        rgba(255, 153, 51, 0.2),
+        var(--hover-bg),
+        rgba(19, 136, 8, 0.2)
+    ) !important;
+}
+
+/* Loading state */
+.loading {
+    position: relative;
+    opacity: 0.7;
+}
+
+.loading::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        var(--bg-secondary),
+        transparent
+    );
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Theme toggle button */
+.theme-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    background: var(--glass-background);
+    backdrop-filter: var(--glass-backdrop);
+    -webkit-backdrop-filter: var(--glass-backdrop);
+    border: 1px solid var(--glass-border);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: var(--glass-shadow);
+}
+
+/* Location button */
+.location-btn {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    background: var(--glass-background);
+    backdrop-filter: var(--glass-backdrop);
+    -webkit-backdrop-filter: var(--glass-backdrop);
+    border: 1px solid var(--glass-border);
+    padding: 12px;
+    border-radius: 50%;
+    box-shadow: var(--glass-shadow);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.location-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+}
+
+/* Dark theme adjustments */
+[data-theme='dark'] .sidebar,
+[data-theme='dark'] .flight-card,
+[data-theme='dark'] .altitude-legend {
+    background: rgba(17, 25, 40, 0.75) !important;
+    border: 1px solid rgba(255, 255, 255, 0.125) !important;
+}
+
+[data-theme='dark'] .flight-card:hover {
+    background: rgba(17, 25, 40, 0.85) !important;
+}
+
+/* Glass morphism effect */
+.search-container input {
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+}
+
+/* Adjust map controls */
+.leaflet-control-container .leaflet-top {
+    top: 20px;
+}
+
+.leaflet-control-container .leaflet-left {
+    left: 340px;
+}
+
+/* When sidebar is collapsed */
+.sidebar.collapsed + #map {
+    left: 0;
+}
+
+.sidebar.collapsed + .leaflet-control-container .leaflet-left {
+    left: 20px;
+}
+
+/* Scrollbar styling */
+.flight-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.flight-list::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+
+.flight-list::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.flight-list::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+} 
