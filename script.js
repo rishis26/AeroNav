@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 flightList.innerHTML = '<div class="loading-message">Fetching flights...</div>';
             }
 
-            const apiKey = '0e51e0b298334ae2cef9e792a689251a';
+            const apiKey = '05020b782273893b8cc3fbe6e855ed55';
             
             // Major Indian airports IATA codes
             const indianAirports = [
