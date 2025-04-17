@@ -86,11 +86,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const apiKey = '0e51e0b298334ae2cef9e792a689251a';
             
-            // Use a simpler API endpoint first
-            const flightsUrl = `https://api.aviationstack.com/v1/flights?access_key=${apiKey}&limit=100`;
+            // Major Indian airports IATA codes
+            const indianAirports = [
+                'DEL', // Delhi
+                'BOM', // Mumbai
+                'MAA', // Chennai
+                'BLR', // Bangalore
+                'HYD', // Hyderabad
+                'CCU', // Kolkata
+                'COK', // Kochi
+                'PNQ', // Pune
+                'AMD', // Ahmedabad
+                'GOI'  // Goa
+            ];
+
+            // Indian airlines IATA codes
+            const indianAirlines = [
+                'AI',  // Air India
+                'IX',  // Air India Express
+                '6E',  // IndiGo
+                'SG',  // SpiceJet
+                'UK',  // Vistara
+                'G8',  // Go First
+                'I5'   // AirAsia India
+            ];
+
+            // Create URL for Indian flights
+            const flightsUrl = `https://api.aviationstack.com/v1/flights?access_key=${apiKey}&limit=100&arr_iata=${indianAirports.join(',')}&dep_iata=${indianAirports.join(',')}&airline_iata=${indianAirlines.join(',')}`;
             
             try {
-                console.log('Fetching from:', flightsUrl); // Debug log
+                console.log('Fetching Indian flights...'); // Debug log
                 const response = await fetch(flightsUrl);
                 const data = await response.json();
                 
@@ -98,6 +123,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (data.error) {
                     console.error('API Error:', data.error);
+                    if (data.error.code === 104) {
+                        console.log('Monthly API limit reached, using mock data');
+                        return generateMockFlights();
+                    }
                     throw new Error(data.error.message || 'API Error');
                 }
 
@@ -106,44 +135,72 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw new Error('Invalid data format received from API');
                 }
 
+                console.log('Total flights received:', data.data.length); // Debug log
+
                 const flights = data.data
                     .filter(flight => {
-                        // More detailed logging
-                        console.log('Processing flight:', flight);
+                        // Log each flight for debugging
+                        console.log('Processing flight:', {
+                            callsign: flight.flight?.iata || flight.flight?.icao,
+                            airline: flight.airline?.name,
+                            departure: flight.departure?.iata,
+                            arrival: flight.arrival?.iata,
+                            status: flight.flight_status
+                        });
                         
-                        return flight.flight_status === 'active' &&
-                               flight.departure &&
-                               flight.arrival &&
-                               flight.live?.latitude != null &&
-                               flight.live?.longitude != null;
+                        // Accept flights that are either active, scheduled, or en-route
+                        return (flight.flight_status === 'active' || 
+                               flight.flight_status === 'scheduled' ||
+                               flight.flight_status === 'en-route') &&
+                               // Must have either live position or departure/arrival coordinates
+                               ((flight.live?.latitude && flight.live?.longitude) || 
+                                (flight.departure?.latitude && flight.departure?.longitude));
                     })
-                    .map(flight => ({
-                        icao24: flight.flight.iata || flight.flight.icao,
-                        callsign: flight.flight.iata || flight.flight.icao,
-                        country: flight.airline?.country_name || 'Unknown',
-                        airline: flight.airline?.name || 'Unknown Airline',
-                        position: {
-                            lat: parseFloat(flight.live.latitude),
-                            lng: parseFloat(flight.live.longitude)
-                        },
-                        altitude: Math.round(parseFloat(flight.live?.altitude || 35000) * 3.28084), // Convert to feet
-                        speed: Math.round(parseFloat(flight.live?.speed || 400)), // Use actual speed if available
-                        heading: parseFloat(flight.live?.direction || 0),
-                        lastUpdate: Date.now() / 1000,
-                        departure: flight.departure ? `${flight.departure.airport || ''} (${flight.departure.iata || 'N/A'})` : 'N/A',
-                        arrival: flight.arrival ? `${flight.arrival.airport || ''} (${flight.arrival.iata || 'N/A'})` : 'N/A',
-                        status: flight.flight_status,
-                        isIndian: (flight.airline?.country_name === 'India') || 
-                                (flight.departure?.country_name === 'India') ||
-                                (flight.arrival?.country_name === 'India')
-                    }));
+                    .map(flight => {
+                        // Calculate position - prefer live position, fall back to departure
+                        const position = {
+                            lat: parseFloat(flight.live?.latitude || flight.departure?.latitude),
+                            lng: parseFloat(flight.live?.longitude || flight.departure?.longitude)
+                        };
 
-                console.log(`Processed ${flights.length} valid flights`); // Debug log
+                        // Calculate heading - either from live data or based on departure/arrival
+                        const heading = flight.live?.direction || 
+                            (flight.departure && flight.arrival ? 
+                                calculateHeading(
+                                    parseFloat(flight.departure.latitude),
+                                    parseFloat(flight.departure.longitude),
+                                    parseFloat(flight.arrival.latitude),
+                                    parseFloat(flight.arrival.longitude)
+                                ) : 0);
+
+                        return {
+                            icao24: flight.flight?.iata || flight.flight?.icao || 'UNKNOWN',
+                            callsign: flight.flight?.iata || flight.flight?.icao || 'UNKNOWN',
+                            country: flight.airline?.country_name || 'Unknown',
+                            airline: flight.airline?.name || 'Unknown Airline',
+                            position: position,
+                            altitude: Math.round(parseFloat(flight.live?.altitude || 35000) * 3.28084), // Convert to feet
+                            speed: Math.round(parseFloat(flight.live?.speed || 400)), // Use actual speed if available
+                            heading: heading,
+                            lastUpdate: Date.now() / 1000,
+                            departure: flight.departure ? 
+                                `${flight.departure.airport || ''} (${flight.departure.iata || 'N/A'})` : 'N/A',
+                            arrival: flight.arrival ? 
+                                `${flight.arrival.airport || ''} (${flight.arrival.iata || 'N/A'})` : 'N/A',
+                            status: flight.flight_status,
+                            isIndian: true // Since we're specifically querying Indian flights
+                        };
+                    });
+
+                console.log(`Processed ${flights.length} valid Indian flights`); // Debug log
                 
                 if (flights.length === 0) {
-                    console.log('No flights found, falling back to mock data');
+                    console.log('No Indian flights found, falling back to mock data');
                     return generateMockFlights();
                 }
+
+                // Log the processed flights for debugging
+                console.log('Processed flights:', flights);
 
                 return flights;
 
